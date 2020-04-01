@@ -5,7 +5,7 @@ import { User } from '../../Factories'
 import Messages from '../messaging/Messages'
 import MessageInput from '../messaging/MessageInput'
 import ChatHeading from './ChatHeading'
-import { COMMUNITY_CHAT, MESSAGE_RECIEVED, MESSAGE_SENT, TYPING } from '../../Events'
+import { COMMUNITY_CHAT, MESSAGE_RECIEVED, MESSAGE_SENT, TYPING, PRIVATE_MESSAGING } from '../../Events'
 
 
 
@@ -21,19 +21,36 @@ class ChatContainer extends Component {
 
     componentDidMount = () => {
         const { socket } = this.props
-        socket.emit(COMMUNITY_CHAT, this.resetChat)
+        // socket.emit(COMMUNITY_CHAT, this.resetChat)
+        this.initSocket(socket)
+
     }
 
+    initSocket = (socket) => {
+        socket.emit(COMMUNITY_CHAT, this.resetChat)
+        socket.on(PRIVATE_MESSAGING, this.addChat)
+        socket.on('connect', () => {
+            socket.emit(COMMUNITY_CHAT, this.resetChat)
+        })
+        // socket.emit(PRIVATE_MESSAGING, {receiver: "mike", sender: this.props.user.name})
+    }
 
-    resetChat = (chat) => {
+    sendOpenPrivateMessage = (receiver) => {
+        const { socket, user } = this.props
+        const { activeChat } = this.state
+        socket.emit(PRIVATE_MESSAGING, { receiver: receiver, sender: user.name, activeChat })
+        
+    } 
+
+    resetChat = (chat) => {   
         return this.addChat(chat, true)
     }
 
-    addChat = (chat, reset) => {
+    addChat = (chat, reset=false) => {
         console.log(chat)
         const { socket } = this.props
         const { chats } = this.state
-
+ 
         const newChats = reset ? [chat] : [...chats, chat]
 
         this.setState({ chats: newChats, activeChat: chat })
@@ -111,7 +128,9 @@ class ChatContainer extends Component {
                     chats={chats}
                     user={user}
                     activeChat={activeChat}
-                    setActiveChat={this.setActiveChat}/>
+                    setActiveChat={this.setActiveChat}
+                    onSendPrivateMessage={this.sendOpenPrivateMessage}
+                    />
 
                 <div className="chat-room-container">
                     {
